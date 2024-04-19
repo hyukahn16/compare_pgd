@@ -29,7 +29,7 @@ save_file_name = 'resnet18'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 model = RobustModel(device)
-adversary = Adversary(model)
+adversary = Adversary(model.model)
 
 model.train(0, adversary) # trains for one epoch
 # test(19, save_path)
