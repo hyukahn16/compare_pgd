@@ -14,7 +14,8 @@ from models import *
 from autoattack import AutoAttack
 
 class RobustExperiment():
-    def __init__(self, device, load_model=False, lr=0.1, train_pgd_iter=10, test_pgd_iter=20, save_name="resnet18"):
+    def __init__(
+            self, device, load_model=False, lr=0.1, train_pgd_iter=10, test_pgd_iter=20, save_name="resnet18"):
         self.device = device
 
         # self.model = WideResNet(num_classes=10, depth=34, widen_factor=10, activation='ReLU')
@@ -39,9 +40,11 @@ class RobustExperiment():
         self.train_pgd_iter = train_pgd_iter
         self.test_pgd_iter = test_pgd_iter
 
-        self.save_path = "checkpoint"
+        self.checkpoint_dir = "checkpoint"
         self.save_name = save_name
-        self._init_train_log_files()
+        self.save_dir = os.path.join(self.checkpoint_dir, self.save_name)
+        self._init_train_log_file()
+        self._init_autoattack_log_file()
 
     def _load_all_dataset(self):
         """
@@ -69,13 +72,25 @@ class RobustExperiment():
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=100, shuffle=False, num_workers=4)
         return test_loader
     
-    def _init_train_log_files(self):
-        if not os.path.isdir(self.save_path):
-            os.mkdir(self.save_path)
-        self.save_path += '/' + self.save_name + '/'
-        if not os.path.isdir(self.save_path):
-            os.mkdir(self.save_path)
-        open(self.save_path + "train_log.txt", 'w').close() # Remove contents of the file
+    def _init_train_log_file(self):
+        if not os.path.isdir(self.checkpoint_dir):
+            os.mkdir(self.checkpoint_dir)
+        if not os.path.isdir(self.save_dir):
+            os.mkdir(self.save_dir)
+
+        # Create and remove contents of the file
+        self.train_log = self.save_dir + "/train_log.txt"
+        open(self.train_log, 'w').close()
+
+    def _init_autoattack_log_file(self):
+        if not os.path.isdir(self.checkpoint_dir):
+            os.mkdir(self.checkpoint_dir)
+        if not os.path.isdir(self.save_dir):
+            os.mkdir(self.save_dir)
+
+        # Create and remove contents of the file
+        self.autoattack_log = self.save_dir + "/autoattack_log.txt"
+        open(self.autoattack_log, 'w').close()
 
     def train(self, epoch, adversary):
         print('\n[ Train epoch: %d ]' % epoch)
@@ -195,6 +210,12 @@ class Adversary(object):
         self.epsilon = 0.0314 # maximum distortion = 8/255
         self.alpha = 0.00784 # attack step size = 2/255
 
+        # AutoAttack hyperparameters
+        self.autoattack = AutoAttack(self.model, norm='L2', eps=self.epsilon, version='standard', verbose=True)
+        self.test_atks = ["apgd-ce", "apgd-dlr", "square", "fab-t"]
+        self.num_total_test_imgs = 10000
+        self.num_test_imgs = 100
+
     def perturb(self, x_natural, y, pgd_iter):
         x = x_natural.detach()
         # Random initialization
@@ -211,15 +232,10 @@ class Adversary(object):
             x = torch.clamp(x, 0, 1)
         return x
     
-    def test_autoattack(self):
-        autoattack = AutoAttack(self.model, norm='L2', eps=self.epsilon, version='standard', verbose=True)
-        test_atks = ["apgd-ce", "apgd-dlr", "square", "fab-t"]
-        num_total_test_imgs = 10000
-        num_test_imgs = 100
-
+    def test_autoattack(self, epoch=999):
         self.model.eval()
         with torch.no_grad():
-            rand_ind = np.random.choice(num_total_test_imgs, num_test_imgs, replace=False)
+            rand_ind = np.random.choice(self.num_total_test_imgs, self.num_test_imgs, replace=False)
             
             x_test = [x for (x,y) in self.exp.test_loader]
             x_test = torch.cat(x_test, 0)
@@ -231,6 +247,12 @@ class Adversary(object):
             # y_test = y_test[:1000]
             y_test = y_test[rand_ind].to(self.device)
 
-            autoattack.verbose = True
-            autoattack.attacks_to_run = test_atks
-            dict_adv = autoattack.run_standard_evaluation_individual(x_test, y_test, bs=100)
+            self.autoattack.verbose = True
+            self.autoattack.attacks_to_run = self.test_atks
+            dict_adv = self.autoattack.run_standard_evaluation_individual(x_test, y_test, bs=100)
+        
+        # Remove contents of the file
+        with open(self.exp.autoattack_log, 'a') as log_file:
+            log_file.write("Epoch {}".format(epoch))
+            log_file.write(dict_adv)
+            log_file.flush()
