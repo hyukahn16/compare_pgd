@@ -106,7 +106,7 @@ class RobustModel():
         print('\nTotal train robust accuarcy:', 100. * correct / total)
         print('Total train robust loss:', train_loss)
 
-    def test(self, epoch, adversary, save_path):
+    def test(self, epoch, adversary):
         print('\n[ Test epoch: %d ]' % epoch)
         self.model.eval()
         benign_loss = 0
@@ -154,7 +154,7 @@ class RobustModel():
         print(adv_loss_log)
         
         # Save log
-        # log_file = save_path + 'test_log.txt'
+        # log_file = self.save_path + 'test_log.txt'
         # with open(log_file, 'a') as log_file:
         #     log_file.write("Epoch {}".format(epoch))
         #     log_file.write(benign_acc_log)
@@ -169,7 +169,7 @@ class RobustModel():
             'loss': benign_loss,
             'adv_loss': adv_loss
         }
-        torch.save(save_state, save_path + "saved_checkpoint")
+        torch.save(save_state, self.save_path + "saved_checkpoint")
         print('Model Saved!')
 
     def adjust_learning_rate(self, epoch):
