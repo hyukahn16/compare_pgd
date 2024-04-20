@@ -1,12 +1,14 @@
 
 import os
+import numpy as np
+import json
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import torch.backends.cudnn as cudnn
-import numpy as np
 
 from models import *
 
@@ -254,5 +256,5 @@ class Adversary(object):
         # Remove contents of the file
         with open(self.exp.autoattack_log, 'a') as log_file:
             log_file.write("Epoch {}".format(epoch))
-            log_file.write(dict_adv)
+            log_file.write(json.dumps(dict_adv))
             log_file.flush()
