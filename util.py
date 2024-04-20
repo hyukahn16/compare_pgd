@@ -6,13 +6,14 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import torch.backends.cudnn as cudnn
+import numpy as np
 
 from models import *
 
 # pip install git+https://github.com/fra31/auto-attack
 from autoattack import AutoAttack
 
-class RobustModel():
+class RobustExperiment():
     def __init__(self, device, load_model=False, lr=0.1, train_pgd_iter=10, test_pgd_iter=20, save_name="resnet18"):
         self.device = device
 
@@ -183,8 +184,13 @@ class RobustModel():
 
 
 class Adversary(object):
-    def __init__(self, model, rand_init=True, epsilon=8/255, alpha=2/255):
-        self.model = model
+    def __init__(self, robust_exp, device, rand_init=True, epsilon=8/255, alpha=2/255):
+        self.device = device
+
+        self.exp = robust_exp
+        self.model = robust_exp.model
+
+        # PGD hyperparameters
         self.rand_init = rand_init # atk noise starts random
         self.epsilon = 0.0314 # maximum distortion = 8/255
         self.alpha = 0.00784 # attack step size = 2/255
@@ -206,7 +212,7 @@ class Adversary(object):
         return x
     
     def test_autoattack(self):
-        autoattack = AutoAttack(net, norm='L2', eps=epsilon, version='standard', verbose=True)
+        autoattack = AutoAttack(self.model, norm='L2', eps=self.epsilon, version='standard', verbose=True)
         test_atks = ["apgd-ce", "apgd-dlr", "square", "fab-t"]
         num_total_test_imgs = 10000
         num_test_imgs = 100
@@ -215,18 +221,16 @@ class Adversary(object):
         with torch.no_grad():
             rand_ind = np.random.choice(num_total_test_imgs, num_test_imgs, replace=False)
             
-            x_test = [x for (x,y) in test_loader]
+            x_test = [x for (x,y) in self.exp.test_loader]
             x_test = torch.cat(x_test, 0)
             # x_test = x_test[:1000]
-            x_test = x_test[rand_ind].to(device)
+            x_test = x_test[rand_ind].to(self.device)
 
-            y_test = [torch.Tensor(y) for (x,y) in test_loader]
+            y_test = [torch.Tensor(y) for (x,y) in self.exp.test_loader]
             y_test = torch.cat(y_test, 0)
             # y_test = y_test[:1000]
-            y_test = y_test[rand_ind].to(device)
+            y_test = y_test[rand_ind].to(self.device)
 
-            print(x_test.shape)
-            print(y_test.shape)
             autoattack.verbose = True
             autoattack.attacks_to_run = test_atks
             dict_adv = autoattack.run_standard_evaluation_individual(x_test, y_test, bs=100)
