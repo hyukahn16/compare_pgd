@@ -217,7 +217,7 @@ class Adversary(object):
         num_total_test_imgs = 10000
         num_test_imgs = 100
 
-        self.model.model.eval()
+        self.model.eval()
         with torch.no_grad():
             rand_ind = np.random.choice(num_total_test_imgs, num_test_imgs, replace=False)
             
