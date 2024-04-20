@@ -28,17 +28,14 @@ save_file_name = 'resnet18'
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-model = RobustModel(device)
-adversary = Adversary(model.model)
-
-model.train(0, adversary) # trains for one epoch
-# model.test(19, adversary)
+experiment = RobustExperiment(device)
+adversary = Adversary(experiment, device)
     
 # Train
 # for epoch in range(0, 90):
-#     adjust_learning_rate(optimizer, epoch)
-#     train(epoch)
+#     experiment.adjust_learning_rate(epoch)
+#     experiment.train(epoch, adversary)
 #     if (epoch+1) % 10 == 0:
-#         test(epoch, save_path)
-    
-# test_autoattack()
+#         experiment.test(epoch, adversary)
+
+adversary.test_autoattack()
