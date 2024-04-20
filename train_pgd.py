@@ -32,7 +32,7 @@ model = RobustModel(device)
 adversary = Adversary(model.model)
 
 model.train(0, adversary) # trains for one epoch
-# test(19, save_path)
+# model.test(19, save_path)
     
 # Train
 # for epoch in range(0, 90):
