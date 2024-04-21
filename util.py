@@ -17,7 +17,13 @@ from autoattack import AutoAttack
 
 class RobustExperiment():
     def __init__(
-            self, device, lr=0.1, train_pgd_iter=10, test_pgd_iter=20, save_name="resnet18"):
+            self,
+            device,
+            lr=0.1,
+            train_pgd_iter=10,
+            test_pgd_iter=20,
+            save_name="resnet18",
+            testing=False):
         self.device = device
 
         # self.model = WideResNet(num_classes=10, depth=34, widen_factor=10, activation='ReLU')
@@ -38,16 +44,19 @@ class RobustExperiment():
         self.test_pgd_iter = test_pgd_iter
 
         # Create all save directories and files
-        self.checkpoint_dir = "checkpoint"
-        self.save_name = save_name
-        self.save_dir = os.path.join(self.checkpoint_dir, self.save_name)
-        if not os.path.isdir(self.checkpoint_dir):
-            os.mkdir(self.checkpoint_dir)
-        if not os.path.isdir(self.save_dir):
-            os.mkdir(self.save_dir)
-        self._init_train_log_file()
-        self._init_autoattack_log_file()
-        self._init_test_log_file()
+        if not testing:
+            self.checkpoint_dir = "checkpoint"
+            self.save_name = save_name
+            self.save_dir = os.path.join(self.checkpoint_dir, self.save_name)
+            if not os.path.isdir(self.checkpoint_dir):
+                os.mkdir(self.checkpoint_dir)
+            if os.path.isdir(self.save_dir):
+                self.save_dir += "_new"
+            else:
+                os.mkdir(self.save_dir)
+            self._init_train_log_file()
+            self._init_autoattack_log_file()
+            self._init_test_log_file()
 
 
     def _load_all_dataset(self):
@@ -90,8 +99,8 @@ class RobustExperiment():
         self.pgd_test_log = self.save_dir + "/pgd_test_log.txt"
         open(self.pgd_test_log, 'w').close()
 
-    def load_model(self, epoch):
-        checkpoint = torch.load(self.save_dir + "/saved_checkpoint+_{}.pt".format(epoch))
+    def load_model(self, saved_file):
+        checkpoint = torch.load(self.save_dir + saved_file)
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch = checkpoint['epoch']
@@ -189,7 +198,7 @@ class RobustExperiment():
             'loss': benign_loss,
             'adv_loss': adv_loss
         }
-        torch.save(save_state, self.save_dir + "/saved_checkpoint+_{}.pt".format(epoch))
+        torch.save(save_state, self.save_dir + "/saved_checkpoint_{}.pt".format(epoch))
 
     def adjust_learning_rate(self, epoch):
         lr = self.lr
@@ -224,7 +233,6 @@ class Adversary(object):
             log_path=self.exp.autoattack_log)
         self.test_atks = ["apgd-ce", "apgd-dlr", "square", "fab-t"]
         self.num_total_test_imgs = 10000
-        self.num_test_imgs = 100
 
     def perturb(self, x_natural, y, pgd_iter):
         x = x_natural.detach()
@@ -244,27 +252,34 @@ class Adversary(object):
             x = torch.clamp(x, 0, 1)
         return x
     
-    def test_autoattack(self, epoch=None):
+    def test_autoattack(self, epoch=None, full_test=False, num_tests=100):
+        if not full_test and num_tests > self.num_total_test_imgs:
+            print("Could not run AutoAttack test - number of tests exceeds total number of test images")
+            return
+        
         self.model.eval()
         with torch.no_grad():
-            rand_ind = np.random.choice(
-                self.num_total_test_imgs, self.num_test_imgs, replace=False)
-            
             x_test = [x for (x,y) in self.exp.test_loader]
             x_test = torch.cat(x_test, 0)
-            # x_test = x_test[:1000]
-            x_test = x_test[rand_ind].to(self.device)
 
             y_test = [torch.Tensor(y) for (x,y) in self.exp.test_loader]
             y_test = torch.cat(y_test, 0)
-            # y_test = y_test[:1000]
-            y_test = y_test[rand_ind].to(self.device)
 
-            self.autoattack.verbose = True
-            self.autoattack.attacks_to_run = self.test_atks
+            if not full_test:
+                rand_ind = np.random.choice(
+                    self.num_total_test_imgs, num_tests, replace=False)
+                x_test = x_test[rand_ind].to(self.device)
+                y_test = y_test[rand_ind].to(self.device)
+            else:
+                x_test = x_test.to(self.device)
+                y_test = y_test.to(self.device)
+
 
             with open(self.exp.autoattack_log, 'a') as log:
                 log.write("AutoAttack test @ Epoch {}\n".format(epoch))
                 log.flush()
+
+            self.autoattack.verbose = True
+            self.autoattack.attacks_to_run = self.test_atks
             dict_adv = self.autoattack.run_standard_evaluation_individual(
                 x_test, y_test, bs=100)
