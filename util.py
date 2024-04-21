@@ -281,7 +281,7 @@ class Adversary(object):
                 x_test = x_test.to(self.device)
                 y_test = y_test.to(self.device)
 
-            if not testing:
+            if not self.testing:
                 with open(self.exp.autoattack_log, 'a') as log:
                     log.write("AutoAttack test @ Epoch {}\n".format(epoch))
                     log.flush()
