@@ -201,7 +201,8 @@ class RobustExperiment():
 
 
 class Adversary(object):
-    def __init__(self, robust_exp, device, rand_init=True, epsilon=8/255, alpha=2/255):
+    def __init__(
+            self, robust_exp, device, rand_init=True, epsilon=8/255, alpha=2/255):
         self.device = device
 
         self.exp = robust_exp
@@ -213,7 +214,13 @@ class Adversary(object):
         self.alpha = 0.00784 # attack step size = 2/255
 
         # AutoAttack hyperparameters
-        self.autoattack = AutoAttack(self.model, norm='L2', eps=self.epsilon, version='standard', verbose=True)
+        self.autoattack = AutoAttack(
+            self.model,
+            norm='L2',
+            eps=self.epsilon,
+            verbose=True,
+            device=self.device,
+            log_path=self.exp.autoattack_log)
         self.test_atks = ["apgd-ce", "apgd-dlr", "square", "fab-t"]
         self.num_total_test_imgs = 10000
         self.num_test_imgs = 100
@@ -230,7 +237,9 @@ class Adversary(object):
                 loss = F.cross_entropy(logits, y)
             grad = torch.autograd.grad(loss, [x])[0]
             x = x.detach() + self.alpha * torch.sign(grad.detach())
-            x = torch.min(torch.max(x, x_natural - self.epsilon), x_natural + self.epsilon)
+            x = torch.min(
+                    torch.max(x, x_natural - self.epsilon), x_natural + self.epsilon
+                    )
             x = torch.clamp(x, 0, 1)
         return x
     
@@ -257,7 +266,7 @@ class Adversary(object):
         # FIGURE OUT HOW TO GET THE RESULTS LIKE I WANTED FROM AUTOATTACK GITHUB
 
         # Remove contents of the file
-        with open(self.exp.autoattack_log, 'a') as log_file:
-            log_file.write("Epoch {}".format(epoch))
-            log_file.write(json.dumps(dict_adv))
-            log_file.flush()
+        # with open(self.exp.autoattack_log, 'a') as log_file:
+        #     log_file.write("Epoch {}".format(epoch))
+        #     log_file.write(json.dumps(dict_adv))
+        #     log_file.flush()
