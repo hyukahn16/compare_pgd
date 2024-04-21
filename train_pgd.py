@@ -27,14 +27,14 @@ save_file_name = 'resnet18'
 
 train_start_epoch = 0
 load_model = False
-load_epoch = None
+saved_file = "/saved_checkpoint+_89.pt"
 ######################
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 experiment = RobustExperiment(device)
 if load_model:
-    train_start_epoch = experiment.load_model(load_epoch)
+    train_start_epoch = experiment.load_model(saved_file)
 adversary = Adversary(experiment, device)
 
 
@@ -46,4 +46,6 @@ for epoch in range(train_start_epoch, 90):
     if (epoch+1) % 5 == 0:
         experiment.test(epoch, adversary)
     if (epoch+1) % 10 == 0:
-        adversary.test_autoattack(epoch)
+        adversary.test_autoattack(epoch=epoch, full_test=False, num_tests=100)
+
+adversary.test_autoattack(full_test=True)
