@@ -212,8 +212,15 @@ class RobustExperiment():
 
 class Adversary(object):
     def __init__(
-            self, robust_exp, device, rand_init=True, epsilon=8/255, alpha=2/255):
+            self,
+            robust_exp,
+            device,
+            rand_init=True,
+            epsilon=8/255,
+            alpha=2/255,
+            testing=False):
         self.device = device
+        self.testing = testing
 
         self.exp = robust_exp
         self.model = robust_exp.model
@@ -230,7 +237,7 @@ class Adversary(object):
             eps=self.epsilon,
             verbose=True,
             device=self.device,
-            log_path=self.exp.autoattack_log)
+            log_path= None if testing else self.exp.autoattack_log)
         self.test_atks = ["apgd-ce", "apgd-dlr", "square", "fab-t"]
         self.num_total_test_imgs = 10000
 
@@ -254,7 +261,7 @@ class Adversary(object):
     
     def test_autoattack(self, epoch=None, full_test=False, num_tests=100):
         if not full_test and num_tests > self.num_total_test_imgs:
-            print("Could not run AutoAttack test - number of tests exceeds total number of test images")
+            print("Couldn't run AutoAttack test - # of tests > total # of test images")
             return
         
         self.model.eval()
@@ -274,10 +281,10 @@ class Adversary(object):
                 x_test = x_test.to(self.device)
                 y_test = y_test.to(self.device)
 
-
-            with open(self.exp.autoattack_log, 'a') as log:
-                log.write("AutoAttack test @ Epoch {}\n".format(epoch))
-                log.flush()
+            if not testing:
+                with open(self.exp.autoattack_log, 'a') as log:
+                    log.write("AutoAttack test @ Epoch {}\n".format(epoch))
+                    log.flush()
 
             self.autoattack.verbose = True
             self.autoattack.attacks_to_run = self.test_atks
