@@ -262,6 +262,6 @@ class Adversary(object):
             self.autoattack.attacks_to_run = self.test_atks
 
             with open(self.exp.autoattack_log, 'a') as log:
-                log.write("AutoAttack test @ Epoch {}".format(epoch))
+                log.write("AutoAttack test @ Epoch {}\n".format(epoch))
                 log.flush()
             dict_adv = self.autoattack.run_standard_evaluation_individual(x_test, y_test, bs=100)
