@@ -35,6 +35,6 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 experiment = RobustExperiment(device, testing=True)
 if load_model:
     train_start_epoch = experiment.load_model(saved_file)
-adversary = Adversary(experiment, device)
+adversary = Adversary(experiment, device, testing=True)
 
 adversary.test_autoattack(full_test=True)
