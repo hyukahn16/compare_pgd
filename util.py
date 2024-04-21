@@ -62,7 +62,7 @@ class RobustExperiment():
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.ToTensor(),
         ])
-        train_dataset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
+        train_dataset = torchvision.datasets.CIFAR10(root='../data', train=True, download=True, transform=transform_train)
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=4)
         return train_loader
 
@@ -70,7 +70,7 @@ class RobustExperiment():
         transform_test = transforms.Compose([
             transforms.ToTensor(),
         ])
-        test_dataset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_test)
+        test_dataset = torchvision.datasets.CIFAR10(root='../data', train=False, download=True, transform=transform_test)
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=100, shuffle=False, num_workers=4)
         return test_loader
     
@@ -252,7 +252,10 @@ class Adversary(object):
             self.autoattack.verbose = True
             self.autoattack.attacks_to_run = self.test_atks
             dict_adv = self.autoattack.run_standard_evaluation_individual(x_test, y_test, bs=100)
-        
+        # TODO: dict_adv does not contain results like score % as I expected.
+        # Returns tensors for each attack with bunch of probabilities??
+        # FIGURE OUT HOW TO GET THE RESULTS LIKE I WANTED FROM AUTOATTACK GITHUB
+
         # Remove contents of the file
         with open(self.exp.autoattack_log, 'a') as log_file:
             log_file.write("Epoch {}".format(epoch))
