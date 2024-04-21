@@ -17,7 +17,7 @@ from autoattack import AutoAttack
 
 class RobustExperiment():
     def __init__(
-            self, device, load_model=False, lr=0.1, train_pgd_iter=10, test_pgd_iter=20, save_name="resnet18"):
+            self, device, lr=0.1, train_pgd_iter=10, test_pgd_iter=20, save_name="resnet18"):
         self.device = device
 
         # self.model = WideResNet(num_classes=10, depth=34, widen_factor=10, activation='ReLU')
@@ -31,22 +31,24 @@ class RobustExperiment():
         self.optimizer = optim.SGD(self.model.parameters(), lr=self.lr, momentum=0.9, weight_decay=0.0005)
         # self.optimizer = optim.SGD(self.model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0002)
 
-        if load_model:
-            checkpoint = torch.load("")
-            self.model.load_state_dict(checkpoint["model_state_dict"])
-            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-            epoch = checkpoint['epoch']
-
         self.train_loader, self.test_loader = self._load_all_dataset()
 
+        # PGD attack iteration
         self.train_pgd_iter = train_pgd_iter
         self.test_pgd_iter = test_pgd_iter
 
+        # Create all save directories and files
         self.checkpoint_dir = "checkpoint"
         self.save_name = save_name
         self.save_dir = os.path.join(self.checkpoint_dir, self.save_name)
+        if not os.path.isdir(self.checkpoint_dir):
+            os.mkdir(self.checkpoint_dir)
+        if not os.path.isdir(self.save_dir):
+            os.mkdir(self.save_dir)
         self._init_train_log_file()
         self._init_autoattack_log_file()
+        self._init_test_log_file()
+
 
     def _load_all_dataset(self):
         """
@@ -75,24 +77,25 @@ class RobustExperiment():
         return test_loader
     
     def _init_train_log_file(self):
-        if not os.path.isdir(self.checkpoint_dir):
-            os.mkdir(self.checkpoint_dir)
-        if not os.path.isdir(self.save_dir):
-            os.mkdir(self.save_dir)
-
         # Create and remove contents of the file
         self.train_log = self.save_dir + "/train_log.txt"
         open(self.train_log, 'w').close()
 
     def _init_autoattack_log_file(self):
-        if not os.path.isdir(self.checkpoint_dir):
-            os.mkdir(self.checkpoint_dir)
-        if not os.path.isdir(self.save_dir):
-            os.mkdir(self.save_dir)
-
         # Create and remove contents of the file
         self.autoattack_log = self.save_dir + "/autoattack_log.txt"
         open(self.autoattack_log, 'w').close()
+
+    def _init_test_log_file(self):
+        self.pgd_test_log = self.save_dir + "/pgd_test_log.txt"
+        open(self.pgd_test_log, 'w').close()
+
+    def load_model(self, epoch):
+        checkpoint = torch.load(self.save_dir + "/saved_checkpoint+_{}.pt".format(epoch))
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        epoch = checkpoint['epoch']
+        return epoch
 
     def train(self, epoch, adversary):
         print('\n[ Train epoch: %d ]' % epoch)
@@ -172,12 +175,11 @@ class RobustExperiment():
         print(adv_loss_log)
         
         # Save log
-        # log_file = self.save_path + 'test_log.txt'
-        # with open(log_file, 'a') as log_file:
-        #     log_file.write("Epoch {}".format(epoch))
-        #     log_file.write(benign_acc_log)
-        #     log_file.write('\n' + adv_acc_log + '\n\n')
-        #     log_file.flush()
+        with open(self.pgd_test_log, 'a') as log:
+            log.write("Epoch {}".format(epoch))
+            log.write(benign_acc_log)
+            log.write('\n' + adv_acc_log + '\n\n')
+            log.flush()
 
         # Save model
         save_state = {
@@ -187,8 +189,7 @@ class RobustExperiment():
             'loss': benign_loss,
             'adv_loss': adv_loss
         }
-        torch.save(save_state, self.save_path + "saved_checkpoint")
-        print('Model Saved!')
+        torch.save(save_state, self.save_dir + "/saved_checkpoint+_{}.pt".format(epoch))
 
     def adjust_learning_rate(self, epoch):
         lr = self.lr
@@ -246,7 +247,8 @@ class Adversary(object):
     def test_autoattack(self, epoch=None):
         self.model.eval()
         with torch.no_grad():
-            rand_ind = np.random.choice(self.num_total_test_imgs, self.num_test_imgs, replace=False)
+            rand_ind = np.random.choice(
+                self.num_total_test_imgs, self.num_test_imgs, replace=False)
             
             x_test = [x for (x,y) in self.exp.test_loader]
             x_test = torch.cat(x_test, 0)
@@ -264,4 +266,5 @@ class Adversary(object):
             with open(self.exp.autoattack_log, 'a') as log:
                 log.write("AutoAttack test @ Epoch {}\n".format(epoch))
                 log.flush()
-            dict_adv = self.autoattack.run_standard_evaluation_individual(x_test, y_test, bs=100)
+            dict_adv = self.autoattack.run_standard_evaluation_individual(
+                x_test, y_test, bs=100)
