@@ -24,18 +24,26 @@ epsilon = 0.0314 # maximum distortion = 8/255
 alpha = 0.00784 # attack step size = 2/255
 rand_init = True
 save_file_name = 'resnet18'
+
+train_start_epoch = 0
+load_model = False
+load_epoch = None
 ######################
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 experiment = RobustExperiment(device)
+if load_model:
+    train_start_epoch = experiment.load_model(load_epoch)
 adversary = Adversary(experiment, device)
-    
-# Train
-# for epoch in range(0, 90):
-#     experiment.adjust_learning_rate(epoch)
-#     experiment.train(epoch, adversary)
-#     if (epoch+1) % 10 == 0:
-#         experiment.test(epoch, adversary)
 
-adversary.test_autoattack()
+
+# Train
+for epoch in range(train_start_epoch, 90):
+    experiment.adjust_learning_rate(epoch)
+    experiment.train(epoch, adversary)
+
+    if (epoch+1) % 5 == 0:
+        experiment.test(epoch, adversary)
+    if (epoch+1) % 10 == 0:
+        adversary.test_autoattack(epoch)
