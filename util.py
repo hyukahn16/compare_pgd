@@ -243,7 +243,7 @@ class Adversary(object):
             x = torch.clamp(x, 0, 1)
         return x
     
-    def test_autoattack(self, epoch=999):
+    def test_autoattack(self, epoch=None):
         self.model.eval()
         with torch.no_grad():
             rand_ind = np.random.choice(self.num_total_test_imgs, self.num_test_imgs, replace=False)
@@ -260,13 +260,8 @@ class Adversary(object):
 
             self.autoattack.verbose = True
             self.autoattack.attacks_to_run = self.test_atks
-            dict_adv = self.autoattack.run_standard_evaluation_individual(x_test, y_test, bs=100)
-        # TODO: dict_adv does not contain results like score % as I expected.
-        # Returns tensors for each attack with bunch of probabilities??
-        # FIGURE OUT HOW TO GET THE RESULTS LIKE I WANTED FROM AUTOATTACK GITHUB
 
-        # Remove contents of the file
-        # with open(self.exp.autoattack_log, 'a') as log_file:
-        #     log_file.write("Epoch {}".format(epoch))
-        #     log_file.write(json.dumps(dict_adv))
-        #     log_file.flush()
+            with open(self.exp.autoattack_log, 'a') as log:
+                log.write("AutoAttack test @ Epoch {}".format(epoch))
+                log.flush()
+            dict_adv = self.autoattack.run_standard_evaluation_individual(x_test, y_test, bs=100)
