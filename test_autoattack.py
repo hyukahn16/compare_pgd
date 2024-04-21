@@ -32,7 +32,7 @@ saved_file = "/saved_checkpoint+_89.pt"
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-experiment = RobustExperiment(device)
+experiment = RobustExperiment(device, testing=True)
 if load_model:
     train_start_epoch = experiment.load_model(saved_file)
 adversary = Adversary(experiment, device)
