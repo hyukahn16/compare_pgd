@@ -43,11 +43,11 @@ class RobustExperiment():
         self.train_pgd_iter = train_pgd_iter
         self.test_pgd_iter = test_pgd_iter
 
+        self.checkpoint_dir = "checkpoint"
+        self.save_name = save_name
+        self.save_dir = os.path.join(self.checkpoint_dir, self.save_name)
         # Create all save directories and files
         if not testing:
-            self.checkpoint_dir = "checkpoint"
-            self.save_name = save_name
-            self.save_dir = os.path.join(self.checkpoint_dir, self.save_name)
             if not os.path.isdir(self.checkpoint_dir):
                 os.mkdir(self.checkpoint_dir)
             if os.path.isdir(self.save_dir):
