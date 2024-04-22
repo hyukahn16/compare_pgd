@@ -227,13 +227,13 @@ class Adversary(object):
 
         # PGD hyperparameters
         self.rand_init = rand_init # atk noise starts random
-        self.epsilon = 0.0314 # maximum distortion = 8/255
-        self.alpha = 0.00784 # attack step size = 2/255
+        self.epsilon = epsilon # maximum distortion = 8/255
+        self.alpha = alpha # attack step size = 2/255
 
         # AutoAttack hyperparameters
         self.autoattack = AutoAttack(
             self.model,
-            norm='L2',
+            norm= 'Linf', # 'L2',
             eps=self.epsilon,
             verbose=True,
             device=self.device,
