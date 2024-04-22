@@ -32,9 +32,13 @@ saved_file = "/saved_checkpoint+_89.pt"
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-experiment = RobustExperiment(device, testing=True)
-if load_model:
-    train_start_epoch = experiment.load_model(saved_file)
-adversary = Adversary(experiment, device, testing=True)
+if __name__ == '__main__':
+    experiment = RobustExperiment(device, testing=True)
+    if load_model:
+        train_start_epoch = experiment.load_model(saved_file)
+    # Create log file
+    test_log = experiment.save_dir + "/test_autoattack_log.txt"
+    open(test_log, 'w').close()
+    adversary = Adversary(experiment, device, testing=True)
 
-adversary.test_autoattack(full_test=True)
+    adversary.test_autoattack(full_test=False)
