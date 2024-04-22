@@ -237,7 +237,7 @@ class Adversary(object):
             eps=self.epsilon,
             verbose=True,
             device=self.device,
-            log_path= None if testing else self.exp.autoattack_log)
+            log_path= self.exp.save_dir + "/test_autoattack_log.txt" if testing else self.exp.autoattack_log)
         self.test_atks = ["apgd-ce", "apgd-dlr", "square", "fab-t"]
         self.num_total_test_imgs = 10000
 
